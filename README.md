@@ -1,309 +1,347 @@
-# Express.js Webhook Server
+# Social Media AI Automation Platform (on Express Webhook Server)
 
-A production-ready Express.js webhook server with comprehensive error handling, security features, environment variable management, and comprehensive logging.
+Bu repo, mevcut Express.js webhook sunucusunu temel alarak; tüm sosyal medya hesaplarının analizini yapan, potansiyel müşterileri tespit eden, içerik üreten, e-ticaret entegrasyonu sağlayan ve çok kanallı otomasyonları AI destekli olarak orkestre eden modüler bir platform haline getirir.
 
-## Features
+Ana hedefler:
+- Potansiyel müşteri tespiti ve araştırma (prospecting & enrichment)
+- Instagram/TikTok Reels üretimi ve zamanlama/publish
+- Takipçi topluluk büyütme (etik ve platform kurallarına uygun growth playbook'ları)
+- E-ticaret entegrasyonu (ürün senkron, katalog, sipariş webhook’ları)
+- YouTube için popüler video üretimi (Veo 3.1 ile senaryo ve varlık üretimi)
+- Instagram yorum ve DM otomasyonu (cevap, sınıflandırma, CRM’e işleme)
+- Randevu oluşturma ve çok kanallı sohbet (WhatsApp, IG DM, Web chat)
+- Danışanlara sesli arama ile memnuniyet anketi (Voice/RTC entegrasyonu)
+- Tüm modüller için yapay zekâ destekli analiz ve karar mekanizmaları
 
-- ✅ **Webhook Verification**: Secure webhook token verification for incoming requests
-- ✅ **Error Handling**: Comprehensive try-catch blocks and error middleware
-- ✅ **Security**: Helmet.js for HTTP headers, input validation, payload size limits
-- ✅ **Environment Variables**: dotenv integration for configuration management
-- ✅ **Logging**: Morgan HTTP request logging with environment-specific levels
-- ✅ **Production Ready**: Graceful shutdown, health check endpoint, environment awareness
-- ✅ **Monitoring**: Request logging, error tracking, timestamp tracking
+Uyarı ve sorumluluk reddi:
+- Platform politikaları: Instagram, TikTok, YouTube, Meta, Google vb. platformların API kullanım koşulları, otomasyon ve spam politikalarına kesinlikle uyun. Scraping ve izinsiz otomasyon yapmayın. Bu repo yalnızca resmi API’ler ve izinli entegrasyonlar hedeflenerek tasarlanmıştır.
+- Gizlilik ve KVKK/GDPR: Kişisel verileri işlerken açık rıza ve yasal gereklilikleri karşılayın. Loglar ve depolama için veri minimizasyonu uygulayın.
 
-## Prerequisites
+## Mimari
 
-- Node.js >= 14.x
-- npm or yarn
+Monorepo benzeri bir klasör yapısı ile her modül bağımsız servis/kitaplık olarak tasarlanır. Express webhook sunucusu (server.js) ise:
+- Webhook alım ve doğrulama
+- Olayların kuyruğa alınması (ör. BullMQ/Redis veya basit in-memory kuyruk)
+- Modül orchestrator’a yayınlama
+rollerini üstlenir.
 
-## Installation
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/drylixirfoods-jpg/express-webhook-server.git
-cd express-webhook-server
+```
+/express-webhook-server
+├─ server.js                 # Ana Express webhook sunucusu
+├─ package.json
+├─ .env.example
+├─ README.md
+└─ modules/
+   ├─ prospecting/
+   │  ├─ index.js
+   │  └─ README.md
+   ├─ reels/
+   │  ├─ index.js
+   │  └─ README.md
+   ├─ growth/
+   │  ├─ index.js
+   │  └─ README.md
+   ├─ ecommerce/
+   │  ├─ index.js
+   │  └─ README.md
+   ├─ youtube/
+   │  ├─ index.js
+   │  └─ README.md
+   ├─ instagram/
+   │  ├─ index.js
+   │  └─ README.md
+   ├─ appointments/
+   │  ├─ index.js
+   │  └─ README.md
+   ├─ voice/
+   │  ├─ index.js
+   │  └─ README.md
+   └─ ai/
+      ├─ orchestrator.js
+      └─ providers/
+         ├─ openai.js
+         ├─ meta.js
+         └─ google.js
 ```
 
-### 2. Install Dependencies
+## Ortam Değişkenleri (.env)
 
-```bash
+Örnek (tamamını ihtiyacınıza göre düzenleyin; gizli anahtarları ASLA commit etmeyin):
+
+```
+# Server
+PORT=3000
+NODE_ENV=development
+VERIFY_TOKEN=your_webhook_verify_token
+ALLOW_ORIGINS=http://localhost:3000
+LOG_LEVEL=debug
+
+# Datastore / Queue (opsiyonel)
+REDIS_URL=redis://localhost:6379
+
+# Instagram / Meta
+META_APP_ID=...
+META_APP_SECRET=...
+META_PAGE_ID=...
+META_IG_BUSINESS_ID=...
+META_ACCESS_TOKEN=...
+
+# YouTube / Google
+GOOGLE_PROJECT_ID=...
+GOOGLE_CLIENT_EMAIL=...
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+YOUTUBE_CHANNEL_ID=...
+
+# TikTok (varsa resmi API erişimi)
+TIKTOK_CLIENT_KEY=...
+TIKTOK_CLIENT_SECRET=...
+
+# E-commerce (Shopify veya Woo gibi)
+SHOPIFY_STORE_DOMAIN=...
+SHOPIFY_ADMIN_API_TOKEN=...
+
+# AI Providers
+OPENAI_API_KEY=...
+GOOGLE_GENAI_API_KEY=...
+META_VEO_API_KEY=...  # Veo 3.1 benzeri jeneratif video model erişimi için placeholder
+
+# Telephony / Voice
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_CALLER_NUMBER=+1...
+```
+
+## Başlangıç Kurulum
+
+1) Bağımlılıklar
+```
 npm install
 ```
 
-### 3. Configure Environment Variables
-
-```bash
-# Copy the example file
-cp .env.example .env
-
-# Edit .env with your actual values
-nano .env
+2) Geliştirme
 ```
-
-**Environment Variables:**
-
-```env
-# Server Configuration
-PORT=3000                          # Server port (default: 3000)
-NODE_ENV=development               # Environment mode (development/production)
-
-# Webhook Configuration
-VERIFY_TOKEN=your_verify_token_here # Webhook verification token
-
-# Logging Configuration
-LOG_LEVEL=debug                    # Logging level (debug/info/warn/error)
-
-# Security Configuration
-ALLOW_ORIGINS=http://localhost:3000 # CORS allowed origins
-RATE_LIMIT_WINDOW_MS=900000         # Rate limit window (15 minutes)
-RATE_LIMIT_MAX_REQUESTS=100         # Max requests per window
-```
-
-## Usage
-
-### Development Mode
-
-Run the server with auto-reload on file changes:
-
-```bash
 npm run dev
 ```
 
-### Production Mode
-
-```bash
+3) Prod
+```
 npm start
 ```
 
-## API Endpoints
+## Modüller ve Başlangıç Kodları
 
-### 1. Health Check
+Aşağıdaki örnekler modules/ altında eklenecek minimal başlangıç kodlarını gösterir. Her biri gerçek API çağrılarını soyutlayan placeholder fonksiyonlar içerir. Gerçek anahtarları ve izinli API endpoint’lerini ekleyin.
 
-```bash
-GET /health
-```
+### 1) Prospecting (Potansiyel Müşteri Tespiti ve Araştırma)
+modules/prospecting/index.js
+```js
+const { aiComplete } = require('../ai/orchestrator');
 
-Response:
-```json
-{
-  "status": "OK",
-  "timestamp": "2025-10-31T23:48:00.000Z"
+async function discoverLeads({ niche, platforms = ['instagram','youtube'] }) {
+  // Not: Sadece resmi arama API’lerini kullanın. Scraping önermiyoruz.
+  const hints = await aiComplete(`Hedef kitle nişi: ${niche}. Hangi içerik formatları ve hashtagler etkilidir? 5 öneri ver.`);
+  return { leads: [], strategy: hints }; // leads: enrichment sonrası doldurulacak
 }
+
+async function enrichLead(lead) {
+  // Örn: Clearbit, PeopleData, resmi platform graph API’leri
+  return { ...lead, score: 0.87 };
+}
+
+module.exports = { discoverLeads, enrichLead };
 ```
 
-### 2. Webhook Verification (GET)
+### 2) Reels Video Üretimi ve Paylaşımı
+modules/reels/index.js
+```js
+const { aiComplete } = require('../ai/orchestrator');
 
-```bash
-GET /?hub.mode=subscribe&hub.challenge=CHALLENGE_VALUE&hub.verify_token=YOUR_TOKEN
+async function generateReelScript(topic) {
+  return aiComplete(`Instagram Reels için 30-45 sn script yaz. Konu: ${topic}. Kanca, fayda, CTA.`);
+}
+
+async function renderReelAssets(script) {
+  // Placeholder: SRT, görüntü, müzik önerileri üretimi
+  return { videoPath: '/tmp/reel.mp4', captions: '...srt...' };
+}
+
+async function publishReel({ videoPath, caption }) {
+  // Instagram Graph API ile publish (içerik politikalarına uyum şart)
+  return { status: 'queued', id: 'ig_media_123' };
+}
+
+module.exports = { generateReelScript, renderReelAssets, publishReel };
 ```
 
-Response: Returns the challenge value if token matches
+### 3) Growth (Takipçi Sağlama - Etik Growth)
+modules/growth/index.js
+```js
+async function runGrowthPlaybook({ niche }) {
+  // Örn: İçerik takvimi, işbirliği, UGC kampanyaları. Takipçi satın alma YAPMAYIN.
+  return { plan: ['UGC yarışması', 'Haftalık canlı yayın', 'Topluluk Q&A'] };
+}
 
-### 3. Webhook Event Processing (POST)
+module.exports = { runGrowthPlaybook };
+```
 
-```bash
-POST /
-Content-Type: application/json
+### 4) E-ticaret Entegrasyonu
+modules/ecommerce/index.js
+```js
+async function syncCatalog(products) {
+  // Shopify Admin API veya Woo REST API
+  return { synced: products.length };
+}
 
-{
-  "entry": [
-    {
-      "id": "123456",
-      "changes": [...]
+async function handleOrderWebhook(payload) {
+  // server.js POST /webhook -> buraya yönlendirilebilir
+  return { acknowledged: true };
+}
+
+module.exports = { syncCatalog, handleOrderWebhook };
+```
+
+### 5) YouTube Popüler Video Üretimi (Veo 3.1)
+modules/youtube/index.js
+```js
+const { aiComplete } = require('../ai/orchestrator');
+
+async function ideatePopularTopics({ niche }) {
+  return aiComplete(`YouTube için ${niche} alanında yüksek potansiyelli 5 video fikri öner.`);
+}
+
+async function generateVideoAssets({ idea }) {
+  // Veo 3.1 veya benzeri: storyboard + B-roll listesi + voiceover metni
+  return { storyboard: '...', voiceover: '...' };
+}
+
+async function publishToYouTube({ title, description, filePath }) {
+  // YouTube Data API v3 yükleme akışı (yetkiler gerekli)
+  return { videoId: 'yt_abc123' };
+}
+
+module.exports = { ideatePopularTopics, generateVideoAssets, publishToYouTube };
+```
+
+### 6) Instagram Yorum ve DM Otomasyonu
+modules/instagram/index.js
+```js
+const { aiClassify, aiComplete } = require('../ai/orchestrator');
+
+async function autoReplyComment(comment) {
+  const intent = await aiClassify(comment.text, ['satis','destek','tesekkur','sorun']);
+  const reply = await aiComplete(`Kısa, samimi ve markaya uygun cevap yaz. Niyet: ${intent}. Yorum: ${comment.text}`);
+  return { reply };
+}
+
+async function autoReplyDM(message) {
+  const reply = await aiComplete(`DM mesajına uygun, net ve aksiyon odaklı cevap oluştur: ${message}`);
+  return { reply };
+}
+
+module.exports = { autoReplyComment, autoReplyDM };
+```
+
+### 7) Randevu Oluşturma ve Sohbet
+modules/appointments/index.js
+```js
+async function proposeSlots({ timezone }) {
+  // Google Calendar / Calendly API entegrasyonu
+  return [{ start: '2025-11-02T09:00:00Z', end: '2025-11-02T09:30:00Z' }];
+}
+
+async function bookSlot({ slot, customer }) {
+  // Calendar API ile rezervasyon
+  return { booked: true, eventId: 'cal_evt_123' };
+}
+
+module.exports = { proposeSlots, bookSlot };
+```
+
+### 8) Sesli Arama ile Memnuniyet
+modules/voice/index.js
+```js
+async function callAndSurvey({ to, script }) {
+  // Twilio Programmable Voice veya benzeri ile TTS + DTMF/ASR anketi
+  return { callSid: 'CA123', status: 'completed', score: 4.7 };
+}
+
+module.exports = { callAndSurvey };
+```
+
+### 9) AI Orchestrator
+modules/ai/orchestrator.js
+```js
+const providers = require('./providers');
+
+async function aiComplete(prompt) {
+  return providers.openai.complete(prompt); // Basit yönlendirme, fallback eklenebilir
+}
+
+async function aiClassify(text, labels) {
+  return providers.openai.classify(text, labels);
+}
+
+module.exports = { aiComplete, aiClassify };
+```
+
+modules/ai/providers/openai.js
+```js
+const fetch = require('node-fetch');
+
+async function complete(prompt) {
+  // OpenAI veya uyumlu LLM endpoint’i – güvenli prompt, denetim
+  return `AI: ${prompt.slice(0,60)}...`; // placeholder
+}
+
+async function classify(text, labels) {
+  // Basit mock sınıflandırma
+  return labels[0];
+}
+
+module.exports = { complete, classify };
+```
+
+## Webhook Akışı Örneği
+
+server.js içindeki POST / webhook’una gelen olaylar modüllere yönlendirilebilir:
+
+```js
+// server.js içinde örnek routing (özet)
+app.post('/', async (req, res) => {
+  try {
+    const event = req.body;
+    // Örn: Instagram comment event
+    if (event.type === 'ig.comment') {
+      const ig = require('./modules/instagram');
+      const result = await ig.autoReplyComment(event.data);
+      return res.json({ received: true, action: result });
     }
-  ]
-}
+    // Örn: E-ticaret sipariş webhooks
+    if (event.type === 'shopify.order.created') {
+      const ec = require('./modules/ecommerce');
+      const ack = await ec.handleOrderWebhook(event.data);
+      return res.json({ received: true, ack });
+    }
+    return res.json({ received: true });
+  } catch (e) {
+    console.error('Webhook error', e);
+    return res.status(500).json({ error: 'internal_error' });
+  }
+});
 ```
 
-Response:
-```json
-{
-  "received": true
-}
-```
+## Güvenlik ve Uyum
+- Yalnızca resmi API’leri kullanın; token ve webhooks doğrulaması zorunlu.
+- Oran sınırlaması, denetim logları, hata yönetimi ve PII maskeleme uygulayın.
+- Kullanıcı rızası ve platform TOS’una uyum kritik.
 
-## Security Features
+## Yol Haritası
+- [ ] Redis tabanlı kuyruk ve işleyiciler (BullMQ)
+- [ ] Çok sağlayıcılı AI fallback ve maliyet kontrolü
+- [ ] İçerik takvimi ve yayınlama orkestrasyonu
+- [ ] E-ticaret müşteri segmentasyonu ve LTV tahmini
+- [ ] Reels auto-caption + telif güvenli müzik entegrasyonu
+- [ ] Sesli arama için gerçek zamanlı ASR/TTS entegrasyonu
 
-### 1. Helmet.js Integration
-- Automatically sets secure HTTP headers
-- Protects against common vulnerabilities (XSS, clickjacking, etc.)
-
-### 2. Input Validation
-- Validates request bodies
-- Rejects empty payloads
-- Limits payload size to 1MB
-
-### 3. Token Verification
-- Verifies webhook tokens before processing
-- Returns 403 Unauthorized for invalid tokens
-
-### 4. Error Handling
-- Catches and logs all errors
-- Prevents sensitive information leakage in production
-- Returns appropriate HTTP status codes
-
-### 5. Environment-Aware Logging
-- Development: Full payload logging for debugging
-- Production: Minimal logging for security and performance
-
-## Deployment
-
-### Using PM2
-
-```bash
-# Install PM2 globally
-npm install -g pm2
-
-# Start the server
-pm2 start server.js --name webhook-server
-
-# View logs
-pm2 logs webhook-server
-
-# Stop the server
-pm2 stop webhook-server
-```
-
-### Using Docker
-
-Create a `Dockerfile`:
-
-```dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY server.js .
-
-EXPOSE 3000
-
-CMD ["node", "server.js"]
-```
-
-Build and run:
-
-```bash
-docker build -t webhook-server .
-docker run -p 3000:3000 -e PORT=3000 -e VERIFY_TOKEN=your_token webhook-server
-```
-
-### Using systemd Service
-
-Create `/etc/systemd/system/webhook-server.service`:
-
-```ini
-[Unit]
-Description=Express Webhook Server
-After=network.target
-
-[Service]
-Type=simple
-User=nodejs
-WorkingDirectory=/home/nodejs/webhook-server
-ExecStart=/usr/bin/node server.js
-Restart=on-failure
-RestartSec=10s
-EnvironmentFile=/home/nodejs/webhook-server/.env
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start:
-
-```bash
-sudo systemctl enable webhook-server
-sudo systemctl start webhook-server
-```
-
-## Monitoring and Logging
-
-### Log Levels
-- **Development**: Morgan 'dev' format (concise, colored)
-- **Production**: Morgan 'combined' format (detailed Apache format)
-
-### Log Examples
-
-```
-[2025-10-31T23:48:00.000Z] ✓ WEBHOOK DOĞRULANDI
-[2025-10-31T23:48:01.000Z] Webhook alındı
-Processing 1 entries
-```
-
-## Troubleshooting
-
-### Port Already in Use
-
-```bash
-# Find the process using the port
-lsof -i :3000
-
-# Kill the process
-kill -9 <PID>
-```
-
-### VERIFY_TOKEN Mismatch
-
-- Ensure `VERIFY_TOKEN` in `.env` matches the token expected by your webhook provider
-- Check for whitespace or special characters
-
-### Cannot Find Module
-
-```bash
-# Reinstall dependencies
-rm -rf node_modules package-lock.json
-npm install
-```
-
-## Project Structure
-
-```
-express-webhook-server/
-├── server.js              # Main server file
-├── package.json           # Project dependencies
-├── package-lock.json      # Dependency lock file
-├── .env                   # Environment variables (not in git)
-├── .env.example           # Example environment variables
-├── .gitignore             # Git ignore rules
-└── README.md              # This file
-```
-
-## Dependencies
-
-- **express**: Web framework
-- **helmet**: Security middleware
-- **morgan**: HTTP request logger
-- **dotenv**: Environment variable loader
-- **nodemon**: (dev) File watcher for development
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -am 'Add feature'`
-4. Push to the branch: `git push origin feature/your-feature`
-5. Submit a pull request
-
-## Best Practices
-
-1. **Always use `.env` files** for sensitive information
-2. **Never commit `.env` files** to the repository
-3. **Test thoroughly** in development before production deployment
-4. **Monitor logs** regularly for errors and suspicious activity
-5. **Keep dependencies updated** for security patches
-6. **Use HTTPS** in production
-7. **Implement rate limiting** for production environments
-8. **Set up proper monitoring** and alerting
-
-## License
-
+## Lisans
 MIT
-
-## Support
-
-For issues and questions, please open an issue on GitHub.
